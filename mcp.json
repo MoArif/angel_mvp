@@ -1,0 +1,16 @@
+{
+    "mcpServers": {
+        "jira": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "@modelcontextprotocol/server-jira"
+            ],
+            "env": {
+                "JIRA_BASE_URL": "https://mofassir.atlassian.net",
+                "JIRA_EMAIL": "mofassir@email.com",
+                "JIRA_API_TOKEN": "ATATT3xFfGF0tZTwjH3WuWaevhm0jzGisLfKSx6U8nrKjjwmFn9nxM77EPGSu_WtVAb4Q-TJWQN1LpaWALcY7PtjJ5toWzBJa8Qw3GbmkElAgQzTiDiN7VIhh4YOllSlT0iXFfM3YOEeKgk6Egj-aRUPdU9JkVRtlRHdN2hGWI4QpSryEX7KLQg=A22E2CDE"
+            }
+        }
+    }
+}
