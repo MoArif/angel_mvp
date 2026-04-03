@@ -26,12 +26,7 @@ final _router = GoRouter(
   routes: [
     GoRoute(
       path: '/',
-      builder: (context, state) => Scaffold(
-        appBar: AppBar(title: const Text('Angel MVP Dashboard')),
-        body: const Center(
-          child: Text("Welcome to the Safety App MVP!"),
-        ),
-      ),
+      builder: (context, state) => const SplashPage(),
     ),
   ],
 );
@@ -49,6 +44,35 @@ class MyApp extends ConsumerWidget {
       ),
       routerConfig: _router,
       debugShowCheckedModeBanner: false,
+    );
+  }
+}
+
+class SplashPage extends StatelessWidget {
+  const SplashPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      backgroundColor: Colors.black87,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(color: Colors.blueAccent),
+            SizedBox(height: 20),
+            Text(
+              "BUILDING",
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 4,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
