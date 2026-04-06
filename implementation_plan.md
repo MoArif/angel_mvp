@@ -23,9 +23,6 @@ Build a **reliable, low-friction safety check-in system** that:
 - SMS Acknowledgment (Contacts can click a link to cancel the alert)
 - Basic permissions onboarding
 
-> [!WARNING]
-> **OS Throttling Constraint:** For the MVP, we will rely on "App Open" and "Manual Check-ins" to build confidence scores. iOS and Android severely throttle background "heartbeats" and "movement tracking", which would cause false positive alerts.
-
 ---
 
 # 🔷 2. Tech Stack
@@ -41,7 +38,7 @@ Build a **reliable, low-friction safety check-in system** that:
   - PostgreSQL Database
   - PostgREST API (Auto-generated CRUD)
   - Edge Functions (TypeScript)
-  - `pg_cron` (Database native scheduler)
+  - `pg_cron` & `pg_net` (Database native scheduler & HTTP worker)
 - **Twilio**: SMS API (For notifying contacts who don't have the app)
 - **Firebase Cloud Messaging (FCM)**: Push notifications to the User.
 
@@ -65,147 +62,106 @@ graph TD
 
 ---
 
-# 🔷 4. Data Models
+# 🔷 4. Detailed Implementation - AM-6: Supabase Setup
 
-*Note: Supabase handles core authentication in the `auth.users` schema. We will create a public schema extension mapping to those IDs.*
+## SQL Schema & RLS Policies
 
-## profiles (Public User Data)
 ```sql
-profiles {
-  id (uuid, references auth.users)
-  name
-  phone
-  timezone
-  push_token (string)
-  created_at
-}
-```
+-- 1. Profiles (Sync with Auth)
+create table public.profiles (
+  id uuid references auth.users on delete cascade primary key,
+  name text,
+  phone text,
+  timezone text,
+  push_token text,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
 
-## contacts
-```sql
-contacts {
-  id (uuid)
-  user_id (uuid)
-  name
-  phone (e.164 format for Twilio)
-  priority (1 or 2)
-}
-```
+-- 2. Trigger for profile creation
+create function public.handle_new_user()
+returns trigger as $$
+begin
+  insert into public.profiles (id, name)
+  values (new.id, new.raw_user_meta_data->>'name');
+  return new;
+end;
+$$ language plpgsql security definer;
 
-## checkin_schedules
-```sql
-checkin_schedules {
-  id (uuid)
-  user_id (uuid)
-  start_time (time)
-  end_time (time)
-  timezone (string) -- e.g. "America/New_York"
-  enabled (bool)
-}
-```
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute procedure public.handle_new_user();
 
-## checkin_events
-```sql
-checkin_events {
-  id (uuid)
-  user_id (uuid)
-  scheduled_time (datetimez)
-  status (pending, completed, missed, escalating)
-  confidence_score (float)
-  created_at
-}
-```
+-- 3. Core Tables
+create table public.contacts (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  name text not null,
+  phone text not null,
+  priority integer check (priority in (1, 2)) not null
+);
 
-## activity_signals
-```sql
-activity_signals {
-  id (uuid)
-  user_id (uuid)
-  type (app_open, manual_checkin)
-  created_at (datetimez)
-}
-```
+create table public.checkin_schedules (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  start_time time not null,
+  end_time time not null,
+  timezone text not null,
+  enabled boolean default true not null
+);
 
-## alerts
-```sql
-alerts {
-  id (uuid)
-  user_id (uuid)
-  checkin_event_id (uuid)
-  contact_id (uuid)
-  status (sent, acknowledged)
-  acknowledgement_token (uuid, for webhooks)
-  created_at
-}
+create table public.checkin_events (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  scheduled_time timestamp with time zone not null,
+  status text check (status in ('pending', 'completed', 'missed', 'escalating')) default 'pending' not null,
+  confidence_score float default 0.0,
+  created_at timestamp with time zone default now()
+);
+
+create table public.activity_signals (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  type text check (type in ('app_open', 'manual_checkin')) not null,
+  created_at timestamp with time zone default now()
+);
+
+create table public.alerts (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  checkin_event_id uuid references public.checkin_events(id) on delete cascade not null,
+  contact_id uuid references public.contacts(id) on delete cascade not null,
+  status text check (status in ('sent', 'acknowledged')) default 'sent' not null,
+  acknowledgement_token uuid default gen_random_uuid() not null,
+  created_at timestamp with time zone default now()
+);
+
+-- 4. Enable RLS
+alter table public.profiles enable row level security;
+alter table public.contacts enable row level security;
+alter table public.checkin_schedules enable row level security;
+alter table public.checkin_events enable row level security;
+alter table public.activity_signals enable row level security;
+alter table public.alerts enable row level security;
+
+-- 5. RLS Policies
+create policy "Users can view own profile" on public.profiles for select using (auth.uid() = id);
+create policy "Users can update own profile" on public.profiles for update using (auth.uid() = id);
+
+create policy "Users can manage own contacts" on public.contacts for all using (auth.uid() = user_id);
+create policy "Users can manage own schedules" on public.checkin_schedules for all using (auth.uid() = user_id);
+create policy "Users can view own events" on public.checkin_events for select using (auth.uid() = user_id);
+create policy "Users can insert own signals" on public.activity_signals for insert with check (auth.uid() = user_id);
+create policy "Users can view own alerts" on public.alerts for select using (auth.uid() = user_id);
 ```
 
 ---
 
-# 🔷 5. Edge Functions & API Design
-
-Since CRUD is handled by the Supabase Flutter SDK (with Row Level Security), we only need custom Edge Functions for background logic.
-
-### 1. `escalation-worker` (Triggered via `pg_cron`)
-A Typescript function running every 5 minutes:
-1. Queries users in `active` check-in windows.
-2. Calculates Confidence Score based on `activity_signals`.
-3. If missed & score is low, transitions to `escalating`.
-4. Sends Warning Push Notification (FCM).
-5. If still unacknowledged after grace period, triggers Twilio SMS to `contacts`.
-
-### 2. `alert-webhook` (Public HTTP GET)
-When a contact receives an SMS: *"Alert: [User] missed their check-in. Tap to acknowledge you are handling this: https://[supabase-url]/functions/v1/alert-webhook?token=XYZ"*
-1. Validates the `token`.
-2. Updates `alerts` status to `acknowledged`.
-3. Displays a simple HTML success page (e.g., "Alert acknowledged, the escalation chain has stopped.").
-
----
-
-# 🔷 6. Flutter App Architecture
-
-## Folder Structure
-
-```
-lib/
- ├── core/
- │   ├── providers/ (Supabase, Auth state)
- │   ├── theme/
- │
- ├── features/
- │   ├── onboarding/ (Includes Permission requests)
- │   ├── dashboard/ (Status, "I'm OK" button)
- │   ├── settings/ (Manage Schedules & Contacts)
- │   
- ├── shared/
- │   ├── models/ (Freezed/JsonSerializable data classes)
- │   ├── widgets/
- │
- └── main.dart
-```
-
----
-
-# 🔷 7. Critical Flows
-
-## The "Silent Check-In"
-1. User opens the app.
-2. Flutter AppLifecycleHandler detects `resumed`.
-3. Mobile app inserts a row into `activity_signals` (type: `app_open`).
-4. Next time `pg_cron` runs, the `escalation-worker` sees the recent `app_open` signal, gives the user a passing confidence score, and marks the impending check-in as `completed` without the user ever pressing a button.
-
-## Onboarding Permissions Flow
-To prevent failure rates, onboarding MUST explicitly request:
-1. **Push Notifications:** Mandatory to receive pre-escalation warnings.
-2. **Current Timezone:** Derived from device and sent to Supabase to calculate windows perfectly.
-
----
-
-# 🔷 8. Unified Build Plan (3-4 Weeks)
+# 🔷 5. Unified Build Plan (3-4 Weeks)
 
 ## Week 1: Foundation & Supabase Setup
 - Initialize Flutter project with Riverpod & routing.
-- Set up Supabase project, create tables, and write Row Level Security (RLS) policies.
-- Implement Supabase Auth (Sign up / Login) in Flutter.
+- **[AM-6]** Set up Supabase project, create tables, and write Row Level Security (RLS) policies.
+- **[AM-7]** Implement Supabase Auth (Sign up / Login) in Flutter.
 
 ## Week 2: Core UX & SDK Integration
 - Build Onboarding UI and Permissions request flow.
@@ -221,14 +177,74 @@ To prevent failure rates, onboarding MUST explicitly request:
 
 ## Week 4: Polish & Testing
 - Integrate Firebase Cloud Messaging via Supabase Edge integrations.
-- Exhaustive timezone testing (ensuring local device times align with UTC backend crons).
-- Edge-case testing (failed SMS, missing permissions).
+- Exhaustive timezone testing.
+
+---
+
+# 🔷 6. Detailed Implementation - AM-7: Supabase Auth
+
+## Objective
+Implement core authentication using the Supabase Flutter SDK and Riverpod for state management.
+
+## Proposed Changes
+
+### [Component] Lib (`/lib`)
+
+#### [MODIFY] [main.dart](file:///home/mofassir/PycharmProjects/angelMVP/angle_mvp/lib/main.dart)
+Initialize the Supabase SDK with the local URL and anon key.
+
+### [Component] Features (`/lib/features`)
+
+#### [NEW] `auth/providers/auth_provider.dart`
+Create a Riverpod provider to manage the user session and auth state.
+```dart
+final supabaseAuthProvider = StreamProvider((ref) => Supabase.instance.client.auth.onAuthStateChange);
+```
+
+#### [NEW] `auth/screens/login_screen.dart`
+A modern, premium login screen with:
+- Email/Password input validation.
+- Loading states for the "Login" button.
+- Error feedback using Snackerbars.
+
+#### [NEW] `auth/screens/signup_screen.dart`
+Registration screen with:
+- Name, Email, Password inputs.
+- Passwords confirmation logic.
+
+### [Component] Core (`/lib/core`)
+
+#### [MODIFY] `router/router_provider.dart` (or `main.dart`)
+Implement an `AuthGuard` using GoRouter to:
+- Redirect unauthenticated users to `/login`.
+- Redirect authenticated users from `/login` to `/dashboard`.
+
+## Open Questions
+
+- **Local Development Credentials**: Since you're running Supabase in Docker, the URL should typically be `http://localhost:8000`. I will retrieve the `ANON_KEY` from the `.env` file in the `angel_mvp_subabase` directory.
+- **Styling Preference**: Should I use a specific design language (e.g., Material 3 with custom colors) for the Auth screens? (I'll aim for a "premium, trust-focused" look by default).
+
+## Verification Plan
+
+### Automated Tests
+- Integration test for `Supabase.instance.client.auth.signInWithPassword`.
+- Unit test for the `AuthProvider` state transitions.
+
+### Manual Verification
+- Visual check of Login/Signup screens.
+- Test successful signup check if `profiles` row is created.
+- Test login with valid/invalid credentials.
 
 ---
 
 # 🧠 Core Principle
 
 This is not an AI product. This is a **trust product**.
+
+- Reliability > Intelligence  
+- Simplicity > Features  
+- Consistency > Cleverness
+ product. This is a **trust product**.
 
 - Reliability > Intelligence  
 - Simplicity > Features  
