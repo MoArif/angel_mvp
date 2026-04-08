@@ -1,78 +1,45 @@
+import 'package:angle_mvp/core/theme/app_theme.dart';
+import 'package:angle_mvp/core/router/router_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-// ignore: unused_import
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:go_router/go_router.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // TODO: Initialize Supabase when credentials are ready
-  // await Supabase.initialize(
-  //   url: 'YOUR_SUPABASE_URL',
-  //   anonKey: 'YOUR_SUPABASE_ANON_KEY',
-  // );
 
-  runApp(
-    const ProviderScope(
-      child: MyApp(),
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
     ),
   );
-}
 
-// Basic GoRouter configuration
-final _router = GoRouter(
-  initialLocation: '/',
-  routes: [
-    GoRoute(
-      path: '/',
-      builder: (context, state) => const SplashPage(),
-    ),
-  ],
-);
+  // Use your computer's local IP (192.168.0.123) for real-device debugging
+  // If you switch back to an emulator, you may need 10.0.2.2 (Android) or localhost (iOS/Web)
+  const String supabaseUrl = 'http://192.168.0.123:8000';
+
+  await Supabase.initialize(
+    url: supabaseUrl,
+    anonKey:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzc1MzQwMDAwLCJleHAiOjE5MzMxMDY0MDB9.A9an-61EspHMgGVQnqsxxQPuSRV6IVGf82_lTqJatQ8',
+  );
+
+  runApp(const ProviderScope(child: MyApp()));
+}
 
 class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(routerProvider);
+
     return MaterialApp.router(
       title: 'Safety App MVP',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueAccent),
-        useMaterial3: true,
-      ),
-      routerConfig: _router,
+      theme: AppTheme.darkTheme,
+      routerConfig: router,
       debugShowCheckedModeBanner: false,
-    );
-  }
-}
-
-class SplashPage extends StatelessWidget {
-  const SplashPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: Colors.black87,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(color: Colors.blueAccent),
-            SizedBox(height: 20),
-            Text(
-              "BUILDING",
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 4,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
