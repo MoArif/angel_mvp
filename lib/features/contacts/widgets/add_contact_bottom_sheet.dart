@@ -1,6 +1,7 @@
 import 'package:angle_mvp/core/theme/app_theme.dart';
 import 'package:angle_mvp/features/contacts/providers/contacts_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class AddContactBottomSheet extends ConsumerStatefulWidget {
@@ -12,18 +13,53 @@ class AddContactBottomSheet extends ConsumerStatefulWidget {
 
 class _AddContactBottomSheetState extends ConsumerState<AddContactBottomSheet> {
   final _formKey = GlobalKey<FormState>();
-  String _name = '';
-  String _phone = '';
+  final _nameController = TextEditingController();
+  final _phoneController = TextEditingController();
   int _priority = 1;
   bool _isLoading = false;
 
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _phoneController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickContact() async {
+    if (await FlutterContacts.requestPermission()) {
+      final contact = await FlutterContacts.openExternalPick();
+      if (contact != null) {
+        // Fetch full contact details as openExternalPick only returns ID/DisplayName usually
+        final fullContact = await FlutterContacts.getContact(contact.id);
+        if (fullContact != null && mounted) {
+          setState(() {
+            _nameController.text = fullContact.displayName;
+            if (fullContact.phones.isNotEmpty) {
+              // Get the first phone number, removing non-numeric chars except +
+              _phoneController.text = fullContact.phones.first.number.replaceAll(RegExp(r'[^\d+]'), '');
+            }
+          });
+        }
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Contacts permission denied')),
+        );
+      }
+    }
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    _formKey.currentState!.save();
 
     setState(() => _isLoading = true);
     try {
-      await ref.read(contactsManagerProvider).addContact(_name, _phone, _priority);
+      await ref.read(contactsManagerProvider).addContact(
+        _nameController.text,
+        _phoneController.text,
+        _priority,
+      );
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (mounted) {
@@ -57,22 +93,33 @@ class _AddContactBottomSheetState extends ConsumerState<AddContactBottomSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              'Add Trusted Contact',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Add Trusted Contact',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+                IconButton(
+                  onPressed: _pickContact,
+                  icon: const Icon(Icons.contact_page_outlined, color: AppColors.accent),
+                  tooltip: 'Pick from phone',
+                ),
+              ],
             ),
             const SizedBox(height: 24),
             TextFormField(
+              controller: _nameController,
               style: const TextStyle(color: Colors.white),
               decoration: const InputDecoration(
                 labelText: 'Name',
                 prefixIcon: Icon(Icons.person, color: Colors.white70),
               ),
               validator: (v) => v!.isEmpty ? 'Name required' : null,
-              onSaved: (v) => _name = v!,
             ),
             const SizedBox(height: 16),
             TextFormField(
+              controller: _phoneController,
               style: const TextStyle(color: Colors.white),
               decoration: const InputDecoration(
                 labelText: 'Phone Number',
@@ -80,7 +127,6 @@ class _AddContactBottomSheetState extends ConsumerState<AddContactBottomSheet> {
               ),
               keyboardType: TextInputType.phone,
               validator: (v) => v!.isEmpty ? 'Phone required' : null,
-              onSaved: (v) => _phone = v!,
             ),
             const SizedBox(height: 16),
             Row(

@@ -1,15 +1,20 @@
 # Sprint 2: Automated Safety Monitoring (AM-12, AM-13, AM-14)
 
+## AM-9: Contacts Management (Enhanced)
+- [x] Integrate `flutter_contacts` for native contact picking.
+- [x] Add `READ_CONTACTS` permission to Android Manifest.
+- [x] Implement "Pick from phone" UI in `AddContactBottomSheet`.
+
 ## AM-12: Scheduled Check-ins
-- [ ] Create `SchedulesScreen` and its route.
-- [ ] Build `AddScheduleDialog` with Time Pickers.
-- [ ] Implement `SchedulesProvider` for CRUD operations on `checkin_schedules`.
-- [ ] Implement Toggle (Enable/Disable) logic for existing schedules.
+- [x] Create `SchedulesScreen` and its route.
+- [x] Build `AddScheduleDialog` with Time Pickers.
+- [x] Implement `SchedulesProvider` for CRUD operations on `checkin_schedules`.
+- [x] Implement Toggle (Enable/Disable) logic for existing schedules.
 
 ## AM-13: Silent Check-ins
-- [ ] Create `AppLifecycleService` to monitor foreground transitions.
-- [ ] Implement auto-insert of `app_open` signal into `activity_signals` table.
-- [ ] Add rate-limiting to prevent excessive signal noise.
+- [x] Create `AppLifecycleService` to monitor foreground transitions.
+- [x] Implement auto-insert of `app_open` signal into `activity_signals` table.
+- [x] Add rate-limiting (5-minute cooldown) to prevent excessive signal noise.
 
 ## AM-14: Logic & Backend Hooks
 - [ ] Draft the placeholder/structure for the Escalation logic.
