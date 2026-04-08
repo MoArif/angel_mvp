@@ -14,35 +14,41 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
+  final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _emailFocus = FocusNode();
+  final _passwordFocus = FocusNode();
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _emailFocus.dispose();
+    _passwordFocus.dispose();
     super.dispose();
   }
 
   Future<void> _login() async {
+    if (!_formKey.currentState!.validate()) return;
+
     final email = _emailController.text.trim();
     final password = _passwordController.text;
 
     if (email.isEmpty || password.isEmpty) return;
 
-    final success = await ref.read(authNotifierProvider.notifier).signIn(
-          email: email,
-          password: password,
-        );
+    final success = await ref
+        .read(authNotifierProvider.notifier)
+        .signIn(email: email, password: password);
 
     if (!mounted) return;
     if (!success) {
-      final errorMessage = ref.read(authNotifierProvider).error.toString();
+      final authState = ref.read(authNotifierProvider);
+      final errorMessage =
+          authState.error?.toString() ?? 'Invalid login credentials';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(errorMessage.contains('Exception: ') 
-              ? errorMessage.split('Exception: ').last 
-              : 'Invalid login credentials'),
+          content: Text(errorMessage),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -55,9 +61,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: AppColors.backgroundGradient,
-        ),
+        decoration: const BoxDecoration(gradient: AppColors.backgroundGradient),
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
@@ -85,80 +89,91 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       color: Colors.white,
                       size: 40,
                     ),
-                  )
-                  .animate()
-                  .fadeIn(duration: 600.ms)
-                  .scale(delay: 200.ms),
+                  ).animate().fadeIn(duration: 600.ms).scale(delay: 200.ms),
 
                   const SizedBox(height: 32),
 
                   Text(
                     'Welcome Back',
                     style: Theme.of(context).textTheme.displayLarge,
-                  )
-                  .animate()
-                  .fadeIn(delay: 300.ms)
-                  .slideY(begin: 0.2),
+                  ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.2),
 
                   const SizedBox(height: 8),
 
                   Text(
                     'Stay safe, stay connected.',
                     style: Theme.of(context).textTheme.bodyMedium,
-                  )
-                  .animate()
-                  .fadeIn(delay: 400.ms),
+                  ).animate().fadeIn(delay: 400.ms),
 
                   const SizedBox(height: 48),
 
                   // Login Form Card
-                  GlassCard(
-                    child: Column(
-                      children: [
-                        TextFormField(
-                          controller: _emailController,
-                          decoration: const InputDecoration(
-                            labelText: 'Email Address',
-                            prefixIcon: Icon(Icons.email_outlined),
+                  Form(
+                    key: _formKey,
+                    child: GlassCard(
+                      child: Column(
+                        children: [
+                          TextFormField(
+                            controller: _emailController,
+                            focusNode: _emailFocus,
+                            textInputAction: TextInputAction.next,
+                            onFieldSubmitted: (_) =>
+                                _passwordFocus.requestFocus(),
+                            decoration: const InputDecoration(
+                              labelText: 'Email Address',
+                              prefixIcon: Icon(Icons.email_outlined),
+                            ),
+                            keyboardType: TextInputType.emailAddress,
+                            validator: (value) {
+                              if (value == null || value.isEmpty)
+                                return 'Please enter your email';
+                              if (!value.contains('@'))
+                                return 'Please enter a valid email';
+                              return null;
+                            },
                           ),
-                          keyboardType: TextInputType.emailAddress,
-                        ),
-                        const SizedBox(height: 20),
-                        TextFormField(
-                          controller: _passwordController,
-                          decoration: const InputDecoration(
-                            labelText: 'Password',
-                            prefixIcon: Icon(Icons.lock_outline),
+                          const SizedBox(height: 20),
+                          TextFormField(
+                            controller: _passwordController,
+                            focusNode: _passwordFocus,
+                            textInputAction: TextInputAction.done,
+                            onFieldSubmitted: (_) => _login(),
+                            decoration: const InputDecoration(
+                              labelText: 'Password',
+                              prefixIcon: Icon(Icons.lock_outline),
+                            ),
+                            obscureText: true,
+                            validator: (value) {
+                              if (value == null || value.isEmpty)
+                                return 'Please enter your password';
+                              return null;
+                            },
                           ),
-                          obscureText: true,
-                        ),
-                        const SizedBox(height: 32),
-                        
-                        ElevatedButton(
-                          onPressed: authState.isLoading ? null : _login,
-                          child: authState.isLoading
-                              ? const SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
+                          const SizedBox(height: 32),
+
+                          ElevatedButton(
+                            onPressed: authState.isLoading ? null : _login,
+                            child: authState.isLoading
+                                ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Text(
+                                    'Sign In',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
-                                )
-                              : const Text(
-                                  'Sign In',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                        ),
-                      ],
+                          ),
+                        ],
+                      ),
                     ),
-                  )
-                  .animate()
-                  .fadeIn(delay: 500.ms)
-                  .slideY(begin: 0.1),
+                  ).animate().fadeIn(delay: 500.ms).slideY(begin: 0.1),
 
                   const SizedBox(height: 24),
 
@@ -179,9 +194,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ],
                       ),
                     ),
-                  )
-                  .animate()
-                  .fadeIn(delay: 700.ms),
+                  ).animate().fadeIn(delay: 700.ms),
                 ],
               ),
             ),

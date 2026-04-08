@@ -14,21 +14,18 @@ void main() async {
       statusBarIconBrightness: Brightness.light,
     ),
   );
-  
+
   // Use your computer's local IP (192.168.0.123) for real-device debugging
   // If you switch back to an emulator, you may need 10.0.2.2 (Android) or localhost (iOS/Web)
   const String supabaseUrl = 'http://192.168.0.123:8000';
-  
+
   await Supabase.initialize(
     url: supabaseUrl,
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzc1MzQwMDAwLCJleHAiOjE5MzMxMDY0MDB9.A9an-61EspHMgGVQnqsxxQPuSRV6IVGf82_lTqJatQ8',
+    anonKey:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzc1MzQwMDAwLCJleHAiOjE5MzMxMDY0MDB9.A9an-61EspHMgGVQnqsxxQPuSRV6IVGf82_lTqJatQ8',
   );
 
-  runApp(
-    const ProviderScope(
-      child: MyApp(),
-    ),
-  );
+  runApp(const ProviderScope(child: MyApp()));
 }
 
 class MyApp extends ConsumerWidget {

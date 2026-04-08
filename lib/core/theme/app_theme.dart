@@ -8,7 +8,7 @@ class AppColors {
   static const accent = Color(0xFF6366F1);
   static const textPrimary = Colors.white;
   static const textSecondary = Color(0xFF94A3B8);
-  
+
   static const primaryGradient = LinearGradient(
     colors: [primary, accent],
     begin: Alignment.topLeft,
@@ -18,10 +18,7 @@ class AppColors {
   static const backgroundGradient = RadialGradient(
     center: Alignment.topLeft,
     radius: 1.5,
-    colors: [
-      Color(0xFF1E293B),
-      background,
-    ],
+    colors: [Color(0xFF1E293B), background],
   );
 }
 

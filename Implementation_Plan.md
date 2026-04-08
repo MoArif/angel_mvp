@@ -244,8 +244,85 @@ This is not an AI product. This is a **trust product**.
 - Reliability > Intelligence  
 - Simplicity > Features  
 - Consistency > Cleverness
- product. This is a **trust product**.
 
-- Reliability > Intelligence  
-- Simplicity > Features  
-- Consistency > Cleverness
+---
+
+# 🔷 7. Feature Refinement & Polish
+
+## Objective
+Refine the currently implemented MVP features (Authentication and Dashboard) to ensure robust form validation, scalable component separation, and flawless user experience before building the next features.
+
+## User Review Required
+> [!IMPORTANT]
+> The current dashboard uses monolithic UI and placeholder statistics. Moving forward, we'll extract these into functional placeholder components to prepare for backend data (shimmers, pull-to-refresh). Please review the refinement tasks below and approve the plan to proceed.
+
+## Proposed Changes
+
+### [Component] Authentication (`/lib/features/auth`)
+#### [MODIFY] `screens/login_screen.dart`
+#### [MODIFY] `screens/signup_screen.dart`
+- Implement `Form` with client-side validation logic (e.g. Email parsing, password lengths).
+- Add `FocusNode` handling so user can use the "Next" button comfortably on keyboards.
+
+### [Component] Auth Provider
+#### [MODIFY] `providers/auth_provider.dart`
+- Capture specific `AuthException` to return user-friendly, localized error messages instead of raw string traces.
+
+### [Component] Dashboard (`/lib/features/dashboard`)
+#### [MODIFY] `screens/dashboard_screen.dart`
+#### [NEW] `widgets/user_header.dart` (or similarly separated out components)
+#### [NEW] `widgets/stat_metrics.dart`
+- Decompose the monolith dashboard code into highly maintainable, isolated smaller widgets.
+- Implement pull-to-refresh `RefreshIndicator` and shimmer loading placeholders.
+
+## Open Questions
+
+- **Dashboard Layout Strategy**: Currently, it's a fixed scroll view. Should we create dummy functions for refreshing this view so it operates identically to the final integration? (I plan to attach a dummy Future delayed return to the refresh action).
+
+## Verification Plan
+
+### Manual Verification
+- Testing invalid login combinations triggers accurate red Snackbars.
+- Keyboards cleanly move from Email to Password field when tapping "next".
+- The dashboard visually looks identical or enhanced but its code is clearly decoupled.
+
+---
+
+# 🔷 8. Sprint 1: Base Feature Implementations (AM-8, AM-9, AM-10)
+
+## Objective
+Implement Onboarding Flow (Timezone & Permissions), Contacts Management, and the Core Dashboard Manual Check-in logic. This sprint completes the foundational front-end mechanisms required before escalating background tasks.
+
+## User Review Required
+> [!IMPORTANT]
+> In Onboarding, since FCM is not formally wired yet, is it acceptable to mock the push token logically, but legitimately retrieve and save the true device timezone to the `profiles` table in Supabase? Also, please approve the `Task` checklist.
+
+## Proposed Changes
+
+### [Component] Onboarding (`/lib/features/onboarding`)
+#### [NEW] `screens/onboarding_screen.dart`
+- Create a UI to prompt users for Push Notification permissions (using `permission_handler`) and detect device timezone (using `flutter_timezone`).
+- Supabase Integration: Update the `timezone` and `push_token` fields in the `profiles` schema.
+#### [MODIFY] `router/router_provider.dart`
+- Route interceptor: If a logged-in user has a null `timezone` in their profile, securely redirect them to `/onboarding`.
+
+### [Component] Settings (`/lib/features/settings`)
+#### [NEW] `screens/contacts_screen.dart`
+- Manage trusted friends. Form interface connecting directly to the `contacts` table in Supabase via Streams.
+- Allows addition of trusted contact (Name, Phone number).
+
+### [Component] Dashboard Logic (`/lib/features/dashboard`)
+#### [MODIFY] `screens/dashboard_screen.dart`
+- Wire up the "I'm OK!" manual check-in button (an aesthetic, prominent action button).
+- When pressed, insert a record into `activity_signals` table with `type = 'manual_checkin'`.
+- Visually indicate success via SnackBar and animation.
+
+## Open Questions
+- **Contact limits**: Currently the database schema (`contacts`) just has priorities but no strict cap. Do we restrict the user to a maximum of 2 trusted contacts on the client side?
+
+## Verification Plan
+### API Checks
+- Verify newly inserted rows into `activity_signals` and `contacts` in Supabase.
+### Manual Verification
+- Simulate signup -> verify redirection intercepts immediately to `/onboarding`.
+- Ensure timezone detected matches local timezone strings (e.g. `America/Los_Angeles`).

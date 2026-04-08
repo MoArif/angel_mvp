@@ -6,12 +6,29 @@ import 'package:angle_mvp/core/providers/supabase_provider.dart';
 /// Provider for the Supabase Session.
 final authSessionProvider = StreamProvider<Session?>((ref) async* {
   final client = ref.watch(supabaseClientProvider);
-  
+
   // Emit the current session immediately if it exists
   yield client.auth.currentSession;
-  
+
   // Then listen for changes
   yield* client.auth.onAuthStateChange.map((event) => event.session);
+});
+
+/// Provider for the User Profile.
+final profileProvider = StreamProvider<Map<String, dynamic>?>((ref) async* {
+  final client = ref.watch(supabaseClientProvider);
+  final session = ref.watch(authSessionProvider).value;
+
+  if (session == null) {
+    yield null;
+    return;
+  }
+
+  yield* client
+      .from('profiles')
+      .stream(primaryKey: ['id'])
+      .eq('id', session.user.id)
+      .map((data) => data.isNotEmpty ? data.first : null);
 });
 
 /// Notifier to handle authentication logic.
@@ -24,21 +41,21 @@ class AuthNotifier extends AsyncNotifier<String?> {
   Future<bool> signIn({required String email, required String password}) async {
     state = const AsyncLoading();
     bool success = true;
-    
+
     state = await AsyncValue.guard(() async {
       try {
         final client = ref.read(supabaseClientProvider);
-        await client.auth.signInWithPassword(
-          email: email,
-          password: password,
-        );
+        await client.auth.signInWithPassword(email: email, password: password);
         return null;
+      } on AuthException catch (e) {
+        success = false;
+        throw e.message;
       } catch (e) {
         success = false;
-        rethrow;
+        throw 'An unexpected error occurred during sign in.';
       }
     });
-    
+
     return success;
   }
 
@@ -59,12 +76,15 @@ class AuthNotifier extends AsyncNotifier<String?> {
           data: {'name': name},
         );
         return null;
+      } on AuthException catch (e) {
+        success = false;
+        throw e.message;
       } catch (e) {
         success = false;
-        rethrow;
+        throw 'An unexpected error occurred during sign up.';
       }
     });
-    
+
     return success;
   }
 
@@ -79,5 +99,6 @@ class AuthNotifier extends AsyncNotifier<String?> {
   }
 }
 
-final authNotifierProvider =
-    AsyncNotifierProvider<AuthNotifier, String?>(AuthNotifier.new);
+final authNotifierProvider = AsyncNotifierProvider<AuthNotifier, String?>(
+  AuthNotifier.new,
+);
