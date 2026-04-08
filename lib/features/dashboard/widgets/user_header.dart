@@ -1,6 +1,7 @@
 import 'package:angle_mvp/features/auth/providers/auth_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 class UserHeader extends ConsumerWidget {
   final AsyncValue<String?> profile;
@@ -35,22 +36,42 @@ class UserHeader extends ConsumerWidget {
             ),
           ],
         ),
-        IconButton(
-          onPressed: () => ref.read(authNotifierProvider.notifier).signOut(),
-          icon: Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
+        Row(
+          children: [
+            IconButton(
+              onPressed: () => context.push('/contacts'),
+              icon: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.people_alt_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
             ),
-            child: const Icon(
-              Icons.logout_rounded,
-              color: Colors.white,
-              size: 20,
+            IconButton(
+              onPressed: () => ref.read(authNotifierProvider.notifier).signOut(),
+              icon: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.redAccent.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.logout_rounded,
+                  color: Colors.redAccent,
+                  size: 20,
+                ),
+              ),
             ),
-          ),
+          ],
         ),
       ],
     );
   }
 }
+

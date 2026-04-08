@@ -1,5 +1,6 @@
 import 'package:angle_mvp/core/theme/app_theme.dart';
 import 'package:angle_mvp/core/router/router_provider.dart';
+import 'package:angle_mvp/core/services/lifecycle_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -28,11 +29,25 @@ void main() async {
   runApp(const ProviderScope(child: MyApp()));
 }
 
-class MyApp extends ConsumerWidget {
+class MyApp extends ConsumerStatefulWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends ConsumerState<MyApp> {
+  @override
+  void initState() {
+    super.initState();
+    // Initialize lifecycle service
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(lifecycleServiceProvider).init();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
 
     return MaterialApp.router(
