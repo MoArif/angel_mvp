@@ -27,7 +27,7 @@ class UserHeader extends ConsumerWidget {
                 ).textTheme.displayLarge?.copyWith(fontSize: 28),
               ),
               loading: () => const Text('...'),
-              error: (_, __) => Text(
+              error: (_, _) => Text(
                 session?.user.email?.split('@').first ?? 'User',
                 style: Theme.of(
                   context,
@@ -54,7 +54,8 @@ class UserHeader extends ConsumerWidget {
               ),
             ),
             IconButton(
-              onPressed: () => ref.read(authNotifierProvider.notifier).signOut(),
+              onPressed: () =>
+                  ref.read(authNotifierProvider.notifier).signOut(),
               icon: Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
@@ -74,4 +75,3 @@ class UserHeader extends ConsumerWidget {
     );
   }
 }
-
