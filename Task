@@ -1,18 +1,21 @@
-# Sprint 1: Base Features (AM-8, AM-9, AM-10)
+# Sprint 2: Automated Safety Monitoring (AM-12, AM-13, AM-14)
 
-## AM-8: Onboarding UI & Permissions
-- [x] Add `flutter_timezone` and `permission_handler` to `pubspec.yaml` using CLI.
-- [x] Build `OnboardingScreen` with permission prompting UI and timezone detection logic.
-- [x] Implement `updateProfile` method to save timezone to Supabase `profiles` table.
-- [x] Implement GoRouter redirect logic to enforce onboarding completion if user `timezone` is missing.
+## AM-9: Contacts Management (Enhanced)
+- [x] Integrate `flutter_contacts` for native contact picking.
+- [x] Add `READ_CONTACTS` permission to Android Manifest.
+- [x] Implement "Pick from phone" UI in `AddContactBottomSheet`.
 
-## AM-9: Contacts Management
-- [ ] Build `ContactsScreen` layout with a list and an Add Contact button.
-- [ ] Build `AddContactBottomSheet` form for name, phone, and priority.
-- [ ] Hook up `contacts` Supabase table read stream.
-- [ ] Hook up `contacts` table insert/delete logic.
+## AM-12: Scheduled Check-ins
+- [x] Create `SchedulesScreen` and its route.
+- [x] Build `AddScheduleDialog` with Time Pickers.
+- [x] Implement `SchedulesProvider` for CRUD operations on `checkin_schedules`.
+- [x] Implement Toggle (Enable/Disable) logic for existing schedules.
 
-## AM-10: Dashboard Logic (Manual Check-ins)
-- [ ] Add a prominent "I'm OK" manual check-in button to `dashboard_screen` UI.
-- [ ] Implement logic sending `activity_signals` of type `manual_checkin` to the Supabase database.
-- [ ] Provide satisfying success feedback (Snackbar or Success state) upon pressing the check-in button.
+## AM-13: Silent Check-ins
+- [x] Create `AppLifecycleService` to monitor foreground transitions.
+- [x] Implement auto-insert of `app_open` signal into `activity_signals` table.
+- [x] Add rate-limiting (5-minute cooldown) to prevent excessive signal noise.
+
+## AM-14: Logic & Backend Hooks
+- [ ] Draft the placeholder/structure for the Escalation logic.
+- [ ] Verify that check-in windows are correctly synced with device timezone.

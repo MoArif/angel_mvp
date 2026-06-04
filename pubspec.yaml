@@ -41,6 +41,7 @@ dependencies:
   flutter_animate: ^4.5.2
   permission_handler: ^12.0.1
   flutter_timezone: ^5.0.2
+  flutter_contacts: 1.1.9
 
 dev_dependencies:
   flutter_test:

@@ -3,6 +3,8 @@ import 'package:angle_mvp/features/auth/screens/login_screen.dart';
 import 'package:angle_mvp/features/auth/screens/signup_screen.dart';
 import 'package:angle_mvp/features/dashboard/screens/dashboard_screen.dart';
 import 'package:angle_mvp/features/onboarding/screens/onboarding_screen.dart';
+import 'package:angle_mvp/features/contacts/screens/contacts_screen.dart';
+import 'package:angle_mvp/features/schedules/screens/schedules_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -64,6 +66,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/dashboard',
         builder: (context, state) => const DashboardScreen(),
+      ),
+      GoRoute(
+        path: '/contacts',
+        builder: (context, state) => const ContactsScreen(),
+      ),
+      GoRoute(
+        path: '/schedules',
+        builder: (context, state) => const SchedulesScreen(),
       ),
     ],
   );
