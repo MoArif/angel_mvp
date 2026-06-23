@@ -4,6 +4,9 @@ import 'package:angle_mvp/features/dashboard/widgets/user_header.dart';
 import 'package:angle_mvp/features/dashboard/widgets/stat_metrics.dart';
 import 'package:angle_mvp/features/dashboard/widgets/recent_activity_list.dart';
 import 'package:angle_mvp/features/dashboard/widgets/manual_checkin_button.dart';
+import 'package:angle_mvp/features/dashboard/widgets/dev_sms_button.dart';
+import 'package:angle_mvp/features/dashboard/widgets/dev_escalation_toggle.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -72,7 +75,25 @@ class DashboardScreen extends ConsumerWidget {
                       .slideY(begin: 0.1),
 
                   const SizedBox(height: 32),
-                  
+
+                  // DEV: SMS Test Button (debug builds only)
+                  if (kDebugMode) ...
+                  [
+                    Text(
+                      'Developer Tools',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.orange.withValues(alpha: 0.7),
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const DevEscalationToggle(),
+                    const SizedBox(height: 12),
+                    const DevSmsButton(),
+                    const SizedBox(height: 24),
+                  ],
+
                   // Branch Tracker Widget
                   Center(
                     child: Container(

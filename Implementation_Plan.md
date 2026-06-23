@@ -158,16 +158,16 @@ create policy "Users can view own alerts" on public.alerts for select using (aut
 
 # 🔷 5. Unified Build Plan (3-4 Weeks)
 
-## Week 1: Foundation & Supabase Setup
-- Initialize Flutter project with Riverpod & routing.
-- **[AM-6]** Set up Supabase project, create tables, and write Row Level Security (RLS) policies.
-- **[AM-7]** Implement Supabase Auth (Sign up / Login) in Flutter.
+## Week 1: Foundation & Supabase Setup [COMPLETED]
+- [x] Initialize Flutter project with Riverpod & routing.
+- [x] **[AM-6]** Set up Supabase project, create tables, and write Row Level Security (RLS) policies.
+- [x] **[AM-7]** Implement Supabase Auth (Sign up / Login) in Flutter.
 
-## Week 2: Core UX & SDK Integration
-- Build Onboarding UI and Permissions request flow.
-- Build Contacts management UI & database integration.
-- Build Dashboard UI and "Manual Check-in" logic.
-- Implement AppLifecycle tracking to record "App Open" events to Supabase.
+## Week 2: Core UX & SDK Integration [COMPLETED]
+- [x] Build Onboarding UI and Permissions request flow.
+- [x] Build Contacts management UI & database integration.
+- [x] Build Dashboard UI and "Manual Check-in" logic.
+- [x] Implement AppLifecycle tracking to record "App Open" events to Supabase.
 
 ## Week 3: Background Logic (Edge Functions)
 - Write the `pg_cron` database job to schedule tick events.
@@ -326,3 +326,58 @@ Implement Onboarding Flow (Timezone & Permissions), Contacts Management, and the
 ### Manual Verification
 - Simulate signup -> verify redirection intercepts immediately to `/onboarding`.
 - Ensure timezone detected matches local timezone strings (e.g. `America/Los_Angeles`).
+
+---
+
+# 🔷 9. Sprint 2: Automated Safety Monitoring (AM-12, AM-13, AM-14) [CURRENT]
+
+## Objective
+Establish the background logic and automated safety loops (silent monitoring + timed check-in windows) and connect them to real escalation routes (Twilio SMS and Webhooks).
+
+## Completed Components
+- **AM-12: Scheduled Check-ins**
+  - CRUD operations on `checkin_schedules` table in Supabase.
+  - Interactive UI for listing, adding, and toggling schedules.
+- **AM-13: Silent Check-ins**
+  - Lifecycle tracking to capture app foreground transitions.
+  - Auto-inserts `app_open` signal with a 5-minute rate limit.
+- **AM-9: Contacts Management (Enhanced)**
+  - Native contact picking integrated in bottom sheet.
+
+## Proposed Changes (Next Steps)
+
+### [Component] Database Scheduler & Functions (`/supabase-project`)
+
+#### [NEW] `volumes/functions/escalation-worker/index.ts`
+TypeScript Edge function running on Deno:
+- Periodically checks for active schedules.
+- Identifies if a user has missed their check-in window.
+- Computes confidence metric using recent `activity_signals` (`manual_checkin`, `app_open`).
+- Integrates with Twilio API to dispatch automated warning SMS text alerts to Emergency Contacts.
+
+#### [NEW] `volumes/functions/alert-webhook/index.ts`
+TypeScript Edge function to serve the acknowledgment landing page:
+- Renders a clean HTML interface.
+- Emergency contacts click the link containing a unique token, which executes a DB mutation marking the alert as `acknowledged`.
+
+#### [MODIFY] `volumes/db/init/data.sql` (or schema migration)
+Database cron job execution commands:
+- Register the `escalation-worker` call frequency (every 5 minutes) via `pg_cron`.
+- Set up notification trigger templates.
+
+#### [MODIFY] `.env`
+Add integration environment keys:
+- Twilio Account SID, Auth Token, Messaging Service SID.
+- Firebase FCM service account keys.
+
+## Open Questions
+- **Twilio Account Access:** Do we have sandboxed credentials to verify the SMS delivery loop locally, or should we use placeholder test keys first?
+- **FCM integration:** Is push notification delivery required locally inside the Docker dev environment, or is physical device verification (APNs/FCM) scheduled for staging/production environments?
+
+## Verification Plan
+### Automated Tests
+- Test cases for checking timezone window overlapping.
+- Mock tests for the Twilio/Edge Function endpoint payloads.
+### Manual Verification
+- Simulate missing a check-in window -> verify the `escalation-worker` triggers.
+- Trigger SMS delivery and click the webhook link to verify the state transitions from `sent` to `acknowledged`.
