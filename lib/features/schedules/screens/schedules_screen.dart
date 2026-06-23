@@ -131,7 +131,7 @@ class SchedulesScreen extends ConsumerWidget {
                                   ),
                                 ),
                                 subtitle: Text(
-                                  schema_timezone_label(schedule['timezone']),
+                                  schemaTimezoneLabel(schedule['timezone']),
                                   style: const TextStyle(
                                     color: Colors.white54,
                                     fontSize: 12,
@@ -196,7 +196,7 @@ class SchedulesScreen extends ConsumerWidget {
     );
   }
 
-  String schema_timezone_label(String tz) {
+  String schemaTimezoneLabel(String tz) {
     if (tz.contains('/')) return tz.split('/').last.replaceAll('_', ' ');
     return tz;
   }
