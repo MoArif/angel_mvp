@@ -44,6 +44,8 @@ class SmsRelayService {
         .eq('user_id', userId)
         .listen(
           (events) async {
+            // ignore: avoid_print
+            print('SmsRelayService STREAM FIRED! Received ${events.length} events.');
             for (final alert in events) {
               final id = alert['id'] as String;
               final status = alert['status'] as String;
@@ -96,10 +98,7 @@ class SmsRelayService {
       final baseUrl = SupabaseConfig.url;
       final ackUrl = '$baseUrl/functions/v1/alert-webhook?token=$token';
 
-      final smsBody =
-          '🚨 Safety Alert: $userName may need help. '
-          'he is a croissant '
-          '';
+      final smsBody = 'Alert: $userName missed checkin. Safe? $ackUrl';
 
       // ignore: avoid_print
       print(

@@ -41,13 +41,10 @@ class ContactsManager {
       'phone': phone,
       'priority': priority,
     });
-    
-    ref.invalidate(contactsProvider);
   }
 
   Future<void> deleteContact(String contactId) async {
     final client = ref.read(supabaseClientProvider);
     await client.from('contacts').delete().eq('id', contactId);
-    ref.invalidate(contactsProvider);
   }
 }

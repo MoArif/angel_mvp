@@ -1,6 +1,6 @@
 class SupabaseConfig {
   /// Local Docker hosting URL
-  static const String url = 'http://192.168.0.123:8000';
+  static const String url = 'http://192.168.28.123:8000';
 
   /// Local Docker hosting Anon Key
   static const String anonKey =

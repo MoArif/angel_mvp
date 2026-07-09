@@ -17,5 +17,5 @@
 - [x] Add rate-limiting (5-minute cooldown) to prevent excessive signal noise.
 
 ## AM-14: Logic & Backend Hooks
-- [ ] Draft the placeholder/structure for the Escalation logic.
-- [ ] Verify that check-in windows are correctly synced with device timezone.
+- [x] Draft the placeholder/structure for the Escalation logic.
+- [x] Verify that check-in windows are correctly synced with device timezone.
